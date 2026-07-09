@@ -13,13 +13,19 @@
  *   (legacy: insight · problem · opportunity · splitFeature · productPreview).
  * Each may set `bg`: "plain" (n-50) | "white" | "tint" (brand p-50).
  *
- * Design system = the FIXED Petavue design language (modeled on the live
- * go.petavue.com/l pages): Instrument Serif display headings + Manrope body/UI,
- * a navy base, generous radii, fadeUp scroll motion, dark statement/comparison/
- * pilot bands, Phosphor icons. Only the SELECTED BRAND'S COLOR drives the ACCENT
- * (buttons, eyebrows, agent-card/calculator highlights) via deriveBrand(); the
- * TYPEFACE is always Petavue's (Instrument Serif + Manrope), never the brand's.
- * Real ad data (count/format/reach) fills proof blocks.
+ * Design system = the FIXED Petavue design language, BLENDED toward the "Fixify"
+ * hand-crafted reference: Instrument Serif display headings + Manrope body/UI +
+ * IBM Plex Mono for the uppercase eyebrows/labels; a navy base with DARK/LIGHT
+ * SECTION ALTERNATION (dark hero with a purple radial glow, alternating dark and
+ * light bands down the page for a bold rhythm); generous radii, refined shadows,
+ * fadeUp scroll motion, Phosphor icons. DUAL ACCENT: the selected brand's COLOR is
+ * the PRIMARY accent (buttons, eyebrows, capability number badges + outcome pills,
+ * integration LIVE pills) via deriveBrand(); a fixed Petavue PURPLE (#6F57FF) is the
+ * SECONDARY accent for the "Petavue voice" (agent-card avatar/app name + the
+ * recommendation band). Numbered cards (capabilities/agentLoop) with tinted badges
+ * and accent OUTCOME pills; rich agent cards (What I found / Why it matters); a
+ * 3-column comparison TABLE (Capability | Dashboards | Petavue agents). The TYPEFACE
+ * is always Petavue's, never the brand's. Real ad data fills proof blocks.
  *
  * Usage: npm run render -- --company <slug> [--shot]
  */
@@ -91,8 +97,8 @@ function deriveBrand(brand: BrandProfile, override?: string): Theme {
 // premium, editorial type system (serif headlines over a heavy-sans UI). Brand identity
 // comes from COLOR (the accent), never the typeface. Signature kept so callers still work.
 function fontSetup(_brand: BrandProfile) {
-  const head = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
-  return { head, headingStack: `'Instrument Serif', Georgia, 'Times New Roman', serif`, bodyStack: `'Manrope', system-ui, -apple-system, Segoe UI, sans-serif`, title: "Instrument Serif", loadTitle: true };
+  const head = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">`;
+  return { head, headingStack: `'Instrument Serif', Georgia, 'Times New Roman', serif`, bodyStack: `'Manrope', system-ui, -apple-system, Segoe UI, sans-serif`, monoStack: `'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace`, title: "Instrument Serif", loadTitle: true };
 }
 
 // ---------- assets ----------
@@ -134,7 +140,7 @@ interface Ctx { T: Theme; viz: ReturnType<typeof buildViz>; brand: BrandProfile 
 type Section = any;
 
 function wrap(bg: string | undefined, cls: string, inner: string, id?: string): string {
-  const bgc = bg === "white" ? "bg-white" : bg === "tint" ? "bg-tint" : "bg-plain";
+  const bgc = bg === "dark" ? "bg-dark" : bg === "white" ? "bg-white" : bg === "tint" ? "bg-tint" : "bg-plain";
   return `<section class="sec ${cls} ${bgc}"${id ? ` id="${id}"` : ""}><div class="padding-global"><div class="container-large">${inner}</div></div></section>`;
 }
 function proofCard(C: Ctx): string {
@@ -182,13 +188,21 @@ function secStatement(s: Section): string {
   return wrap(s.bg ?? "tint", "state", `<div class="statement">${s.eyebrow ? `<div class="section-label center">${icon(s.icon || "quotes")} ${esc(s.eyebrow)}</div>` : ""}<h2>${esc(s.heading)}</h2>${s.body ? `<p class="body">${esc(s.body)}</p>` : ""}</div>`);
 }
 function secComparison(s: Section): string {
-  const pills = (s.us.points || []).map((p: string) => `<li>${icon("check")} ${esc(p)}</li>`).join("");
-  return wrap(s.bg, "comp", `<div class="section-label">${icon(s.icon || "scales")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2><div class="cols"><div class="col them"><div class="tag">${esc(s.them.tag)}</div><p class="body">${esc(s.them.body)}</p></div><div class="col us"><div class="tag">${esc(s.us.tag)}</div><p class="body">${esc(s.us.body)}</p>${pills ? `<ul class="pills">${pills}</ul>` : ""}</div></div>`);
+  const head = `<div class="section-label">${icon(s.icon || "scales")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.sub ? `<p class="section-sub big">${esc(s.sub)}</p>` : ""}`;
+  // Preferred: a 3-column capability table (Capability | Dashboards | Petavue agents).
+  if (Array.isArray(s.rows) && s.rows.length) {
+    const rows = s.rows.map((r: any) => `<tr><th scope="row">${esc(r.capability)}</th><td class="ct-no">${esc(r.dashboards)}</td><td class="ct-yes">${esc(r.petavue)}</td></tr>`).join("");
+    const table = `<div class="ctable-wrap"><table class="ctable"><thead><tr><th>Capability</th><th>${esc(s.themLabel || "Dashboards")}</th><th class="ct-p">${esc(s.usLabel || "Petavue agents")}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return wrap(s.bg ?? "white", "comp comp-table", `${head}${table}`);
+  }
+  // Backward-compat: the older two-column {them, us} shape.
+  const pills = ((s.us && s.us.points) || []).map((p: string) => `<li>${icon("check")} ${esc(p)}</li>`).join("");
+  return wrap(s.bg ?? "dark", "comp comp-cols", `${head}<div class="cols"><div class="col them"><div class="tag">${esc(s.them.tag)}</div><p class="body">${esc(s.them.body)}</p></div><div class="col us"><div class="tag">${esc(s.us.tag)}</div><p class="body">${esc(s.us.body)}</p>${pills ? `<ul class="pills">${pills}</ul>` : ""}</div></div>`);
 }
 function secCapabilities(s: Section): string {
   const n = (s.items || []).length;
-  const cards = (s.items || []).map((it: any) => `<div class="cap"><div class="cap-ic">${icon(it.icon || "circle")}</div><h3>${esc(it.title)}</h3><p>${esc(it.body)}</p></div>`).join("");
-  return wrap(s.bg, "caps", `<div class="section-label center">${icon(s.icon || "stack")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${esc(s.heading)}</h2>${s.sub ? `<p class="section-sub center">${esc(s.sub)}</p>` : ""}<div class="cap-grid cols-${n % 3 === 0 ? 3 : 2}">${cards}</div>`);
+  const cards = (s.items || []).map((it: any, i: number) => `<div class="cap"><div class="cap-top"><span class="cap-num">${String(i + 1).padStart(2, "0")}</span>${it.icon ? `<span class="cap-ic">${icon(it.icon)}</span>` : ""}</div><h3>${esc(it.title)}</h3><p>${esc(it.body)}</p>${it.outcome ? `<span class="cap-outcome">${esc(it.outcome)}</span>` : ""}</div>`).join("");
+  return wrap(s.bg, "caps", `<div class="section-label">${icon(s.icon || "stack")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.sub ? `<p class="section-sub big">${esc(s.sub)}</p>` : ""}<div class="cap-grid cols-${n % 3 === 0 ? 3 : 2}">${cards}</div>`);
 }
 function secProduct(s: Section): string {
   const feats = (s.features || [{ icon: "chart-line-up", text: "Which channel, campaign, and creative produced pipeline" }, { icon: "magnifying-glass", text: "Why a metric moved — root cause, not just a dashboard" }, { icon: "trend-up", text: "Unit economics & pipeline forecasting, across channels" }]).map((f: any) => `<div class="frow">${icon(f.icon || "circle")}<span>${esc(f.text)}</span></div>`).join("");
@@ -210,6 +224,8 @@ function agentCard(c: any): string {
     <div class="ac-top"><span class="ac-dot">${icon("sparkle")}</span><span class="ac-app">${esc(c.app || "Petavue Agent")}</span><span class="ac-time">${esc(c.time || "6:02 AM")}</span></div>
     ${c.tag ? `<div class="ac-tag">${esc(c.tag)}</div>` : ""}
     <div class="ac-title">${esc(c.title)}</div>
+    ${c.found ? `<p class="ac-para"><b>What I found:</b> ${esc(c.found)}</p>` : ""}
+    ${c.why ? `<p class="ac-para"><b>Why it matters:</b> ${esc(c.why)}</p>` : ""}
     ${c.body ? `<p class="ac-body">${esc(c.body)}</p>` : ""}
     ${metrics ? `<div class="ac-metrics">${metrics}</div>` : ""}
     ${c.move ? `<div class="ac-move"><b>Recommendation</b> ${esc(c.move)}</div>` : ""}
@@ -265,7 +281,8 @@ function secDefensibility(s: Section): string {
 }
 // "Connects to your stack" — integration chips with LIVE/READY badges.
 function secIntegrations(s: Section): string {
-  const groups = (s.groups || []).map((gr: any) => `<div class="intg-group"><div class="intg-glabel">${esc(gr.label)}</div><div class="intg-chips">${(gr.items || []).map((it: any) => `<span class="intg-chip${it.status === "live" ? " live" : it.status === "ready" ? " ready" : ""}">${esc(it.name)}${it.status === "live" ? "<em>LIVE</em>" : it.status === "ready" ? "<em>READY</em>" : ""}</span>`).join("")}</div></div>`).join("");
+  const badge = (status: string) => status === "live" ? `<span class="intg-status">Live for you</span>` : status === "ready" ? `<span class="intg-status">Ready if you add it</span>` : "";
+  const groups = (s.groups || []).map((gr: any) => `<div class="intg-group"><div class="intg-glabel">${esc(gr.label)}</div><div class="intg-pills">${(gr.items || []).map((it: any) => `<div class="intg-pill${it.status === "live" ? " live" : it.status === "ready" ? " ready" : ""}"><span class="intg-name">${esc(it.name)}</span>${badge(it.status)}</div>`).join("")}</div></div>`).join("");
   return wrap(s.bg ?? "white", "intg", `<div class="section-label">${icon(s.icon || "plugs-connected")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="intg-groups">${groups}</div>`);
 }
 // The pilot — week-by-week timeline.
@@ -289,7 +306,7 @@ const RENDERERS: Record<string, (s: Section, C: Ctx) => string> = {
 const REQUIRED_FIELDS: Record<string, string[]> = {
   hero: ["headline"], homework: ["channels"], insight: ["heading"], problem: ["heading"],
   opportunity: ["heading"], splitFeature: ["heading"], statement: ["heading"], capabilities: ["items"],
-  agentLoop: ["steps"], recommendations: ["cards"], comparison: ["them", "us"], calculator: ["heading"],
+  agentLoop: ["steps"], recommendations: ["cards"], calculator: ["heading"],
   defensibility: ["points"], integrations: ["groups"], productPreview: [], pilot: ["steps"], cta: ["heading"],
 };
 function validateSpec(spec: any): { errors: string[]; warnings: string[] } {
@@ -304,6 +321,12 @@ function validateSpec(spec: any): { errors: string[]; warnings: string[] } {
     for (const f of REQUIRED_FIELDS[t] ?? []) {
       const v = s[f];
       if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) errors.push(`section[${i}] "${t}" is missing required field "${f}"`);
+    }
+    // comparison needs EITHER the new `rows` table OR the legacy `them`+`us` two-column shape.
+    if (t === "comparison") {
+      const hasRows = Array.isArray(s.rows) && s.rows.length > 0;
+      const hasCols = s.them != null && s.us != null;
+      if (!hasRows && !hasCols) errors.push(`section[${i}] "comparison" needs either "rows" (table) or "them"+"us" (columns)`);
     }
   });
   const types = secs.map((s: any) => s?.type);
@@ -326,12 +349,16 @@ ${F.head}
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
 <style>
   :root{--p-50:${T.p50};--p-100:${T.p100};--p-300:${T.p300};--p-500:${T.p500};--p-800:${T.p800};--p-text:${T.pText};--on-p:${T.onP};--accent-50:${T.accent50};
+    /* SECONDARY accent — the fixed Petavue purple for the "Petavue voice" (agent avatar/app, rec band) */
+    --purple:#6F57FF;--purple-600:#5B44E8;--purple-50:#EFECFF;--purple-100:#E2DCFF;--purple-text:#5A43E0;
     /* rich neutral / navy base (fixed) — brand color enters only as the accent above */
     --bg:#F0F1F5;--bg-card:#FFFFFF;
-    --navy:#151C2E;--navy-mid:#1E2B45;--navy-soft:#2C3D5C;
+    --navy:#111726;--navy-mid:#1E2B45;--navy-soft:#2C3D5C;
     --teal:#0F9B6E;--teal-light:#D1F5E8;--teal-ink:#0B7A56;--coral:#E8452A;--coral-light:#FDECEA;--amber:#D97706;
     --n-50:#F0F1F5;--n-100:#E9EBF1;--n-200:#E1E4EC;--n-300:#CBD0DE;--n-400:#9BA3B8;--n-500:#757F99;--n-600:#5A6380;--n-700:#39415C;--n-800:#1E2B45;--n-900:#151C2E;
-    --text:#1E2B45;--text-muted:#5A6380;--heading:#151C2E;--f-heading:${F.headingStack};--f-body:${F.bodyStack};
+    --text:#1E2B45;--text-muted:#5A6380;--heading:#151C2E;--f-heading:${F.headingStack};--f-body:${F.bodyStack};--f-mono:${F.monoStack};
+    /* on-dark palette */
+    --d-heading:#FFFFFF;--d-text:#C5CBDE;--d-muted:#8B93AC;--d-line:rgba(255,255,255,.10);--d-card:#1A2236;
     --radius:12px;--radius-lg:20px;--radius-pill:999px;
     --shadow:0 1px 2px rgba(21,28,46,.04),0 8px 24px rgba(21,28,46,.05);--shadow-lg:0 2px 6px rgba(21,28,46,.05),0 24px 60px rgba(21,28,46,.10);}
   *{box-sizing:border-box}
@@ -340,12 +367,19 @@ ${F.head}
   .padding-global{padding:0 5%}.container-large{max-width:72rem;margin:0 auto;padding:0 20px}
   .sec{padding:88px 0}.bg-plain{background:var(--bg)}.bg-white{background:var(--bg-card)}.bg-tint{background:var(--p-50)}
   .sec.bg-white{border-top:1px solid var(--n-200);border-bottom:1px solid var(--n-200)}
+  /* ---- dark section: navy band, on-dark type; components get dark variants below ---- */
+  .sec.bg-dark{background:var(--navy);color:var(--d-text)}
+  .bg-dark h1,.bg-dark h2,.bg-dark h3{color:var(--d-heading)}
+  .bg-dark .section-heading{color:var(--d-heading)}
+  .bg-dark .section-label{color:var(--p-300)}
+  .bg-dark .section-sub,.bg-dark .body{color:var(--d-muted)}
+  .bg-dark b,.bg-dark strong{color:var(--d-heading)}
   h1,h2,h3{font-family:var(--f-heading);font-weight:400;color:var(--heading);margin:0}
   em{font-style:italic}
   .ph{vertical-align:middle;line-height:1}
   b,strong{font-weight:700;color:var(--heading)}
-  /* eyebrow / section label — Manrope, wide-tracked uppercase, brand accent */
-  .section-label{font-family:var(--f-body);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--p-text);display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
+  /* eyebrow / section label — IBM Plex Mono, wide-tracked uppercase, brand accent */
+  .section-label{font-family:var(--f-mono);font-size:11.5px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--p-text);display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
   .section-label.center{justify-content:center}.section-label .ph{font-size:15px}
   /* display heading — Instrument Serif, editorial, tight tracking */
   .section-heading{font-family:var(--f-heading);font-size:clamp(30px,4vw,46px);font-weight:400;line-height:1.08;letter-spacing:-.8px;color:var(--heading);max-width:20ch;margin:0}
@@ -362,12 +396,19 @@ ${F.head}
   .nav .rhs strong{color:var(--navy);font-weight:800}
 
   /* hero */
-  .hero{padding-top:80px;padding-bottom:64px}
-  .hero .hero-split{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:flex-start}
-  .hero .hero-solo{max-width:820px}
-  .hero h1{font-size:clamp(42px,6vw,70px);line-height:1.04;letter-spacing:-1.6px;margin:0 0 24px;font-weight:400}
+  .hero{padding-top:80px;padding-bottom:72px;position:relative;overflow:hidden}
+  .hero .hero-split{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;position:relative;z-index:1}
+  .hero .hero-solo{max-width:820px;position:relative;z-index:1}
+  .hero h1{font-size:clamp(42px,6vw,68px);line-height:1.05;letter-spacing:-1.6px;margin:0 0 24px;font-weight:400}
   .hero .subtitle{font-size:17px;color:var(--text-muted);max-width:52ch;margin:0 0 28px;line-height:1.75}
   .hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
+  /* dark hero — navy with a subtle purple radial glow top-right (Fixify signature) */
+  .hero.bg-dark::before{content:"";position:absolute;top:-180px;right:-160px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(111,87,255,.34),transparent 68%);pointer-events:none;z-index:0}
+  .hero.bg-dark::after{content:"";position:absolute;bottom:-220px;left:-120px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--p-500) 26%,transparent),transparent 70%);pointer-events:none;z-index:0}
+  .hero.bg-dark .subtitle{color:var(--d-text)}
+  .hero.bg-dark .subtitle strong{color:#fff}
+  .hero.bg-dark .btn-secondary{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.18)}
+  .hero.bg-dark .btn-secondary:hover{border-color:rgba(255,255,255,.5)}
   .proof{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:26px}
   .proof .lab{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--n-400);margin-bottom:12px}
   .proof .n{font-family:var(--f-body);font-variant-numeric:tabular-nums;font-size:52px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-2px}
@@ -393,12 +434,28 @@ ${F.head}
   .state .statement{text-align:center;max-width:860px;margin:0 auto}
   .state h2{font-size:clamp(30px,4.4vw,50px);font-style:italic;line-height:1.14;letter-spacing:-1px;margin:0 auto;max-width:22ch;color:var(--navy)}
   .state .body{margin:24px auto 0;color:var(--text-muted);font-size:18px;max-width:56ch}
+  .bg-dark.state h2{color:#fff}.bg-dark.state .body{color:var(--d-text)}
+  .bg-dark.state .section-label{justify-content:center}
 
-  /* comparison — dark navy "dashboard vs agents" panel (echoes reference diff table) */
-  .sec.comp{background:var(--navy)}
-  .comp .section-label{color:#8FB6FF}
-  .comp .section-heading{color:#fff}
-  .comp .section-sub{color:var(--n-400)}
+  /* comparison — preferred: a 3-column capability TABLE (Capability | Dashboards | Petavue agents) */
+  .ctable-wrap{margin-top:44px;overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--n-200);box-shadow:var(--shadow)}
+  .ctable{width:100%;border-collapse:collapse;background:var(--bg-card);min-width:640px}
+  .ctable thead th{font-family:var(--f-body);font-size:12px;font-weight:800;letter-spacing:.02em;text-align:left;padding:16px 20px;background:var(--n-50);color:var(--text-muted);border-bottom:1px solid var(--n-200)}
+  .ctable thead th.ct-p{color:var(--p-text)}
+  .ctable tbody th{font-family:var(--f-body);font-size:14px;font-weight:800;letter-spacing:-.2px;color:var(--heading);text-align:left;padding:18px 20px;vertical-align:top;width:30%;border-bottom:1px solid var(--n-200)}
+  .ctable td{font-size:13.5px;line-height:1.6;padding:18px 20px;vertical-align:top;border-bottom:1px solid var(--n-200)}
+  .ctable tr:last-child th,.ctable tr:last-child td{border-bottom:none}
+  .ctable .ct-no{color:var(--text-muted)}.ctable .ct-no::before{content:"✗";color:var(--coral);font-weight:700;margin-right:9px}
+  .ctable .ct-yes{color:var(--text);background:color-mix(in srgb,var(--p-500) 5%,transparent)}.ctable .ct-yes::before{content:"✓";color:var(--teal);font-weight:700;margin-right:9px}
+  .bg-dark .ctable-wrap{border-color:var(--d-line)}.bg-dark .ctable{background:var(--d-card)}
+  .bg-dark .ctable thead th{background:rgba(255,255,255,.04);color:var(--d-muted);border-color:var(--d-line)}
+  .bg-dark .ctable tbody th{color:#fff;border-color:var(--d-line)}.bg-dark .ctable td{color:var(--d-text);border-color:var(--d-line)}
+
+  /* comparison (legacy two-column) — dark navy "dashboard vs agents" panel */
+  .sec.comp-cols{background:var(--navy)}
+  .comp-cols .section-label{color:var(--p-300)}
+  .comp-cols .section-heading{color:#fff}
+  .comp-cols .section-sub{color:var(--n-400)}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch;margin-top:40px}
   .col{border-radius:var(--radius-lg);padding:30px;display:flex;flex-direction:column}
   .col.them{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
@@ -410,12 +467,23 @@ ${F.head}
   .pills{list-style:none;margin:auto 0 0;padding:20px 0 0;border-top:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column;gap:12px}
   .pills li{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:#DCE3F1}.pills li .ph{font-size:18px;flex:none;margin-top:1px;color:#4ADE9B}
 
-  /* capabilities grid */
+  /* capabilities grid — numbered cards + accent outcome pill */
   .cap-grid{display:grid;gap:18px;margin-top:44px}.cap-grid.cols-3{grid-template-columns:repeat(3,1fr)}.cap-grid.cols-2{grid-template-columns:repeat(2,1fr)}
-  .cap{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+  .cap{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column}
   .cap:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
-  .cap-ic{width:42px;height:42px;border-radius:11px;background:var(--p-50);color:var(--p-text);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:18px}
+  .cap-top{display:flex;align-items:center;gap:11px;margin-bottom:16px}
+  .cap-num{font-family:var(--f-mono);font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--p-text);background:var(--p-50);border-radius:8px;padding:5px 9px;line-height:1}
+  .cap-ic{width:34px;height:34px;border-radius:9px;background:var(--p-50);color:var(--p-text);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .cap>.cap-ic{width:42px;height:42px;border-radius:11px;font-size:20px;margin-bottom:18px}
   .cap h3{font-family:var(--f-body);font-size:16px;font-weight:800;letter-spacing:-.3px;margin:0 0 8px;color:var(--heading)}.cap p{margin:0;font-size:14px;color:var(--text-muted);line-height:1.65}
+  .cap-outcome{align-self:flex-start;margin-top:16px;font-family:var(--f-mono);font-size:11.5px;font-weight:500;letter-spacing:-.1px;color:var(--p-text);background:var(--p-50);border:1px solid var(--p-100);border-radius:var(--radius-pill);padding:6px 13px;line-height:1.3}
+  /* capabilities on dark */
+  .bg-dark .cap{background:var(--d-card);border-color:var(--d-line);box-shadow:none}
+  .bg-dark .cap:hover{box-shadow:0 24px 50px rgba(0,0,0,.35)}
+  .bg-dark .cap h3{color:#fff}.bg-dark .cap p{color:var(--d-muted)}
+  .bg-dark .cap-num{background:color-mix(in srgb,var(--p-500) 20%,transparent);color:var(--p-300)}
+  .bg-dark .cap-ic{background:color-mix(in srgb,var(--p-500) 18%,transparent);color:var(--p-300)}
+  .bg-dark .cap-outcome{background:color-mix(in srgb,var(--p-500) 16%,transparent);border-color:color-mix(in srgb,var(--p-500) 34%,transparent);color:var(--p-300)}
 
   /* product mockup */
   .prod .mock{max-width:940px;margin:44px auto 0;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);border:1px solid var(--n-200);text-align:left;background:var(--bg-card)}
@@ -441,20 +509,23 @@ ${F.head}
   .hero-chips{display:flex;gap:22px;flex-wrap:wrap;margin-top:28px}
   .hero-chip{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--text-muted)}
   .hero-chip .ph{color:var(--teal);font-size:12px;background:var(--teal-light);width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+  .hero.bg-dark .hero-chip{color:var(--d-text)}
+  .hero.bg-dark .hero-chip .ph{color:#4ADE9B;background:rgba(74,222,155,.14)}
 
   /* agent recommendation card — refined Slack-style, brand-accented */
   .acard{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:22px;text-align:left;display:flex;flex-direction:column}
   .ac-top{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--n-400);margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid var(--n-200)}
-  .ac-dot{width:28px;height:28px;border-radius:8px;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:none}
-  .ac-app{font-weight:800;color:var(--p-text)}.ac-time{margin-left:auto;font-weight:500;color:var(--n-400)}
-  .ac-tag{font-family:var(--f-body);font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--p-text);background:var(--p-50);align-self:flex-start;padding:4px 9px;border-radius:6px;margin-bottom:12px}
-  .ac-title{font-family:var(--f-body);font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--navy);line-height:1.32;margin-bottom:10px}
+  .ac-dot{width:28px;height:28px;border-radius:8px;background:var(--purple);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+  .ac-app{font-weight:800;color:var(--purple-text)}.ac-time{margin-left:auto;font-weight:500;color:var(--n-400)}
+  .ac-tag{font-family:var(--f-mono);font-size:9.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--p-text);background:var(--p-50);align-self:flex-start;padding:4px 9px;border-radius:6px;margin-bottom:12px}
+  .ac-title{font-family:var(--f-body);font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--navy);line-height:1.32;margin-bottom:12px}
+  .ac-para{font-size:13px;color:var(--text-muted);margin:0 0 10px;line-height:1.6}.ac-para b{color:var(--navy);font-weight:700}
   .ac-body{font-size:13px;color:var(--text-muted);margin:0 0 16px;line-height:1.6}
   .ac-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
   .acm{background:var(--bg);border:1px solid var(--n-200);border-radius:10px;padding:12px 8px;text-align:center}
   .acm-v{font-family:var(--f-body);font-variant-numeric:tabular-nums;font-weight:800;font-size:19px;color:var(--navy);line-height:1;letter-spacing:-.5px}
   .acm-k{font-size:9px;font-weight:600;color:var(--n-400);text-transform:uppercase;letter-spacing:.04em;margin-top:6px;line-height:1.2}
-  .ac-move{font-size:13px;color:var(--text-muted);background:var(--p-50);border-radius:10px;padding:12px 14px;margin-bottom:14px;line-height:1.55}.ac-move b{color:var(--p-text);display:block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+  .ac-move{font-size:13px;color:var(--purple-text);background:var(--purple-50);border:1px solid var(--purple-100);border-radius:10px;padding:12px 14px;margin-bottom:14px;line-height:1.55}.ac-move b{color:var(--purple);display:block;font-family:var(--f-mono);font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
   .ac-impact{background:var(--teal-light);border:1px solid #A7EDD2;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:800;letter-spacing:-.2px;color:var(--teal-ink);margin-bottom:16px;display:flex;align-items:center;gap:8px}.ac-impact .ph{font-size:16px}
   .ac-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
   .ac-btn{flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:9px 12px;border-radius:8px;background:var(--bg-card);color:var(--n-600);border:1px solid var(--n-200)}
@@ -485,6 +556,7 @@ ${F.head}
   /* recommendations */
   .recs-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:44px;align-items:start}
   .recs-note{margin-top:24px;font-size:13px;color:var(--n-500);font-style:italic}
+  .bg-dark .recs-note{color:var(--d-muted)}
 
   /* calculator */
   .calc{margin-top:44px;background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:32px;display:grid;grid-template-columns:1fr 1.05fr;gap:32px;align-items:stretch}
@@ -502,17 +574,18 @@ ${F.head}
   .calc-hero-sub{font-size:14px;opacity:.75;font-weight:500}
   .calc-note{text-align:center;margin-top:20px;font-size:12.5px;color:var(--n-500);font-style:italic}
 
-  /* integrations */
-  .intg-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
-  .intg-group{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);padding:22px 24px}
+  /* integrations — pill rows with mono LIVE FOR YOU / READY IF YOU ADD IT status */
+  .intg-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px;align-items:start}
+  .intg-group{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);padding:24px}
   .bg-white .intg-group{background:var(--bg)}
-  .intg-glabel{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--n-400);margin-bottom:14px}
-  .intg-chips{display:flex;flex-wrap:wrap;gap:8px}
-  .intg-chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--navy);background:var(--bg);border:1px solid var(--n-200);border-radius:99px;padding:8px 13px}
-  .bg-white .intg-chip{background:var(--bg-card)}
-  .intg-chip.live{border-color:var(--p-300);background:var(--p-50);color:var(--p-text)}
-  .intg-chip em{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--n-400)}
-  .intg-chip.live em{color:var(--p-text)}.intg-chip.ready em{color:var(--n-400)}
+  .intg-glabel{font-family:var(--f-mono);font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--n-500);margin-bottom:16px}
+  .intg-pills{display:flex;flex-direction:column;gap:10px}
+  .intg-pill{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--n-200);background:var(--bg);border-radius:var(--radius-pill);padding:12px 18px}
+  .bg-white .intg-pill{background:var(--bg-card)}
+  .intg-name{font-family:var(--f-body);font-size:14.5px;font-weight:700;letter-spacing:-.2px;color:var(--heading)}
+  .intg-status{font-family:var(--f-mono);font-size:9.5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;color:var(--n-500);white-space:nowrap}
+  .intg-pill.live{background:var(--p-50);border-color:var(--p-300)}
+  .intg-pill.live .intg-name{color:var(--p-text)}.intg-pill.live .intg-status{color:var(--p-text);opacity:.78}
 
   /* pilot timeline — dark navy band (echoes reference pilot section) */
   .sec.pilot{background:var(--navy)}
