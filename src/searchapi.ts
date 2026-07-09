@@ -61,9 +61,20 @@ export async function callSearchApi(
     return fetch(url);
   };
 
-  // Retry on 429 (throughput cap) with exponential backoff.
+  // Retry on 429 (throughput cap) AND transient network errors (ECONNRESET etc.) with backoff.
   for (let attempt = 0; ; attempt++) {
-    const res = await doFetch();
+    let res: Response;
+    try {
+      res = await doFetch();
+    } catch (e) {
+      if (attempt < 5) {
+        const wait = 2000 * 2 ** attempt;
+        console.warn(`  [network] ${(e as Error).message} — retrying in ${wait / 1000}s (attempt ${attempt + 1}/5)`);
+        await sleep(wait);
+        continue;
+      }
+      throw e;
+    }
     const body = await res.text();
     if (res.ok) return JSON.parse(body);
     if (res.status === 429 && attempt < 5) {
