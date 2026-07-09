@@ -1,0 +1,27 @@
+{
+  "name": "claude-native-cms",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Personalized landing-page generator driven by a company's real ad strategy.",
+  "scripts": {
+    "scrape:linkedin": "tsx src/scrape-linkedin.ts",
+    "score": "tsx src/score.ts",
+    "fetch:brand": "node --env-file-if-exists=.env --import tsx src/fetch-brand.ts",
+    "render": "tsx src/render.ts",
+    "scrape:meta": "tsx src/scrape-meta.ts",
+    "probe:searchapi": "tsx src/searchapi-probe.ts",
+    "fetch:linkedin": "tsx src/fetch-linkedin.ts",
+    "fetch:meta": "tsx src/fetch-meta.ts",
+    "fetch:google": "tsx src/fetch-google.ts",
+    "merge:vision": "tsx src/merge-vision-copy.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}
