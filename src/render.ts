@@ -225,11 +225,14 @@ function secCta(s: Section): string {
 }
 // ---------- refined-template sections (agent-led) ----------
 // A reusable Slack/inbox-style agent recommendation card — used in the hero and the recommendations section.
+// The Petavue symbol mark (from assets/favicon.svg), recolorable via the `fill` attr —
+// used as the "Petavue Agent" avatar so it shows the real brand logo, not a generic glyph.
+const PETAVUE_MARK = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 20.0393C20.1 20.0393 23.4237 16.6103 23.4237 12.3803C23.4237 8.15037 20.1 4.72131 16 4.72131C11.9 4.72131 8.57627 8.15037 8.57627 12.3803V16.0034C8.57627 16.3817 8.41138 16.7399 8.12723 16.979L4.49791 20.0328C4.29863 20.2005 4 20.0542 4 19.7889V12.3803C4 5.54286 9.37258 0 16 0C22.6275 0 28 5.54286 28 12.3803C28 19.2178 22.6275 24.7607 16 24.7607C15.2836 24.7607 14.5818 24.6959 13.8999 24.5717C13.7198 24.5389 13.5339 24.5856 13.3924 24.7051L4.99644 31.7888C4.59802 32.125 4 31.8325 4 31.3015V26.65C4 26.5555 4.04122 26.4659 4.11226 26.4062L8.57627 22.6499V22.6693L10.4953 21.0502C11.7141 20.0219 13.2618 19.6612 14.6954 19.9223C15.1158 19.9988 15.5514 20.0393 16 20.0393Z" fill="currentColor"/></svg>`;
 function agentCard(c: any): string {
   const metrics = (c.metrics || []).map((m: any) => `<div class="acm"><div class="acm-v">${esc(m.v)}</div><div class="acm-k">${esc(m.k)}</div></div>`).join("");
   const actions = (c.actions || []).map((a: string, i: number) => `<span class="ac-btn${i === 0 ? " pri" : ""}">${esc(a)}</span>`).join("");
   return `<div class="acard">
-    <div class="ac-top"><span class="ac-dot">${icon("sparkle")}</span><span class="ac-app">${esc(c.app || "Petavue Agent")}</span><span class="ac-time">${esc(c.time || "6:02 AM")}</span></div>
+    <div class="ac-top"><span class="ac-dot">${PETAVUE_MARK}</span><span class="ac-app">${esc(c.app || "Petavue Agent")}</span><span class="ac-time">${esc(c.time || "6:02 AM")}</span></div>
     ${c.tag ? `<div class="ac-tag">${esc(c.tag)}</div>` : ""}
     <div class="ac-title">${esc(c.title)}</div>
     ${c.found ? `<p class="ac-para"><b>What I found:</b> ${esc(c.found)}</p>` : ""}
@@ -546,7 +549,8 @@ ${F.head}
   /* agent recommendation card — refined Slack-style, brand-accented */
   .acard{background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:22px;text-align:left;display:flex;flex-direction:column}
   .ac-top{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--n-400);margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid var(--n-200)}
-  .ac-dot{width:28px;height:28px;border-radius:8px;background:var(--purple);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+  .ac-dot{width:28px;height:28px;border-radius:8px;background:var(--purple);color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .ac-dot svg{width:17px;height:17px;display:block}
   .ac-app{font-weight:800;color:var(--purple-text)}.ac-time{margin-left:auto;font-weight:500;color:var(--n-400)}
   .ac-tag{font-family:var(--f-mono);font-size:9.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--p-text);background:var(--p-50);align-self:flex-start;padding:4px 9px;border-radius:6px;margin-bottom:12px}
   .ac-title{font-family:var(--f-body);font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--navy);line-height:1.32;margin-bottom:12px}
