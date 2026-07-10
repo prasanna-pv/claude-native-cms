@@ -13,11 +13,13 @@
  *   (legacy: insight · problem · opportunity · splitFeature · productPreview).
  * Each may set `bg`: "plain" (n-50) | "white" | "tint" (brand p-50).
  *
- * Design system = the FIXED Petavue design language, BLENDED toward the "Fixify"
- * hand-crafted reference: Instrument Serif display headings + Manrope body/UI +
- * IBM Plex Mono for the uppercase eyebrows/labels; a navy base with DARK/LIGHT
- * SECTION ALTERNATION (dark hero with a purple radial glow, alternating dark and
- * light bands down the page for a bold rhythm); generous radii, refined shadows,
+ * Design system = the FIXED Petavue design language, modeled on the "Avoma"
+ * hand-crafted reference: heavy Manrope 800 display headlines + Manrope body/UI +
+ * Manrope 700 uppercase eyebrows, with Instrument Serif as an ITALIC ACCENT only
+ * (emphasis words in headlines + the statement pull-quote). LIGHT-FIRST rhythm (the
+ * "Plain" reference): the page OPENS light and CLOSES light; `dark` is used for AT MOST
+ * ~2 sections, spaced far apart, as emphasis (typically the statement pull-quote + the
+ * pilot band) — never the hero. Everything else white/tint. Generous radii, refined shadows,
  * fadeUp scroll motion, Phosphor icons. DUAL ACCENT: the selected brand's COLOR is
  * the PRIMARY accent (buttons, eyebrows, capability number badges + outcome pills,
  * integration LIVE pills) via deriveBrand(); a fixed Petavue PURPLE (#6F57FF) is the
@@ -48,6 +50,9 @@ function parseArgs(argv: string[]): Args {
   return a;
 }
 const esc = (s: string): string => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Headline escaper: like esc(), but *starred words* become an <em> serif-italic accent
+// (the Avoma move — one or two emphasis words per headline carry the Instrument Serif).
+const escH = (s: string): string => esc(s).replace(/\*([^*]+)\*/g, "<em>$1</em>");
 const TRUST_GREY = "#8E93AF";
 
 // ---------- color math ----------
@@ -92,13 +97,16 @@ function deriveBrand(brand: BrandProfile, override?: string): Theme {
   };
 }
 
-// ---------- fonts (FIXED Petavue type system: Instrument Serif display + Manrope UI) ----------
+// ---------- fonts (FIXED Petavue type system: heavy Manrope display + Instrument Serif accent) ----------
 // The brand's own fonts are intentionally NOT loaded — every generated page shares one
-// premium, editorial type system (serif headlines over a heavy-sans UI). Brand identity
-// comes from COLOR (the accent), never the typeface. Signature kept so callers still work.
+// premium type system, modeled on the hand-crafted Avoma page: a BOLD Manrope (800) is the
+// display/headline face; Instrument Serif is a SPICE, used italic on <em> emphasis words and
+// the statement pull-quote only. Eyebrows are Manrope (no monospace). Brand identity comes
+// from COLOR (the accent), never the typeface. Signature kept so callers still work.
 function fontSetup(_brand: BrandProfile) {
-  const head = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">`;
-  return { head, headingStack: `'Instrument Serif', Georgia, 'Times New Roman', serif`, bodyStack: `'Manrope', system-ui, -apple-system, Segoe UI, sans-serif`, monoStack: `'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace`, title: "Instrument Serif", loadTitle: true };
+  const head = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">`;
+  const sans = `'Manrope', system-ui, -apple-system, Segoe UI, sans-serif`;
+  return { head, headingStack: sans, bodyStack: sans, monoStack: sans, serifStack: `'Instrument Serif', Georgia, 'Times New Roman', serif`, title: "Manrope", loadTitle: true };
 }
 
 // ---------- assets ----------
@@ -166,7 +174,7 @@ function secHero(s: Section, C: Ctx): string {
   const inner = `<div class="${right ? "hero-split" : "hero-solo"}">
     <div>
       <div class="section-label">${esc(s.eyebrow)}</div>
-      <h1>${esc(s.headline)}</h1>
+      <h1>${escH(s.headline)}</h1>
       <p class="subtitle">${esc(s.subhead)}</p>
       <div class="hero-ctas"><a class="btn-primary" href="#cta">${esc(s.ctaLabel || "Book a walkthrough")}</a>${s.secondaryLabel ? `<a class="btn-secondary" href="#body">${esc(s.secondaryLabel)} ${icon("arrow-right")}</a>` : ""}</div>
       ${chips ? `<div class="hero-chips">${chips}</div>` : ""}
@@ -174,21 +182,21 @@ function secHero(s: Section, C: Ctx): string {
   return wrap(s.bg, "hero", inner);
 }
 function secInsight(s: Section, C: Ctx): string {
-  return wrap(s.bg ?? "tint", "insight", `<div class="section-label">${icon(s.icon || "chart-bar")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2><p class="section-sub big">${esc(s.body)}</p>${s.showData ? statTiles(C) : ""}`);
+  return wrap(s.bg ?? "tint", "insight", `<div class="section-label">${icon(s.icon || "chart-bar")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2><p class="section-sub big">${esc(s.body)}</p>${s.showData ? statTiles(C) : ""}`);
 }
 function secList(s: Section, kind: "problem" | "opportunity"): string {
   const def = kind === "problem" ? "warning-circle" : "check-circle";
   const items = (s.points || []).map((p: any) => `<div class="li-row">${icon(p.icon || def)}<div>${p.title ? `<b>${esc(p.title)}</b><br>` : ""}${esc(p.text)}</div></div>`).join("");
-  return wrap(s.bg, kind, `<div class="split2"><div><div class="section-label">${icon(s.icon || (kind === "problem" ? "warning" : "lightning"))} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2></div><div><p class="body">${esc(s.body)}</p>${items ? `<div class="li-list">${items}</div>` : ""}</div></div>`);
+  return wrap(s.bg, kind, `<div class="split2"><div><div class="section-label">${icon(s.icon || (kind === "problem" ? "warning" : "lightning"))} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2></div><div><p class="body">${esc(s.body)}</p>${items ? `<div class="li-list">${items}</div>` : ""}</div></div>`);
 }
 function secSplit(s: Section): string {
-  return wrap(s.bg, "feat", `<div class="split2"><div><div class="section-label">${icon(s.icon || "target")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2></div><div><p class="body">${esc(s.body)}</p>${s.proofline ? `<p class="proofline">${icon("check-circle")} ${esc(s.proofline)}</p>` : ""}</div></div>`);
+  return wrap(s.bg, "feat", `<div class="split2"><div><div class="section-label">${icon(s.icon || "target")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2></div><div><p class="body">${esc(s.body)}</p>${s.proofline ? `<p class="proofline">${icon("check-circle")} ${esc(s.proofline)}</p>` : ""}</div></div>`);
 }
 function secStatement(s: Section): string {
-  return wrap(s.bg ?? "tint", "state", `<div class="statement">${s.eyebrow ? `<div class="section-label center">${icon(s.icon || "quotes")} ${esc(s.eyebrow)}</div>` : ""}<h2>${esc(s.heading)}</h2>${s.body ? `<p class="body">${esc(s.body)}</p>` : ""}</div>`);
+  return wrap(s.bg ?? "tint", "state", `<div class="statement">${s.eyebrow ? `<div class="section-label center">${icon(s.icon || "quotes")} ${esc(s.eyebrow)}</div>` : ""}<h2>${escH(s.heading)}</h2>${s.body ? `<p class="body">${esc(s.body)}</p>` : ""}</div>`);
 }
 function secComparison(s: Section): string {
-  const head = `<div class="section-label">${icon(s.icon || "scales")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.sub ? `<p class="section-sub big">${esc(s.sub)}</p>` : ""}`;
+  const head = `<div class="section-label">${icon(s.icon || "scales")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2>${s.sub ? `<p class="section-sub big">${esc(s.sub)}</p>` : ""}`;
   // Preferred: a 3-column capability table (Capability | Dashboards | Petavue agents).
   if (Array.isArray(s.rows) && s.rows.length) {
     const rows = s.rows.map((r: any) => `<tr><th scope="row">${esc(r.capability)}</th><td class="ct-no">${esc(r.dashboards)}</td><td class="ct-yes">${esc(r.petavue)}</td></tr>`).join("");
@@ -202,18 +210,18 @@ function secComparison(s: Section): string {
 function secCapabilities(s: Section): string {
   const n = (s.items || []).length;
   const cards = (s.items || []).map((it: any, i: number) => `<div class="cap"><div class="cap-top"><span class="cap-num">${String(i + 1).padStart(2, "0")}</span>${it.icon ? `<span class="cap-ic">${icon(it.icon)}</span>` : ""}</div><h3>${esc(it.title)}</h3><p>${esc(it.body)}</p>${it.outcome ? `<span class="cap-outcome">${esc(it.outcome)}</span>` : ""}</div>`).join("");
-  return wrap(s.bg, "caps", `<div class="section-label">${icon(s.icon || "stack")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.sub ? `<p class="section-sub big">${esc(s.sub)}</p>` : ""}<div class="cap-grid cols-${n % 3 === 0 ? 3 : 2}">${cards}</div>`);
+  return wrap(s.bg, "caps", `<div class="section-label">${icon(s.icon || "stack")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2>${s.sub ? `<p class="section-sub big">${esc(s.sub)}</p>` : ""}<div class="cap-grid cols-${n % 3 === 0 ? 3 : 2}">${cards}</div>`);
 }
 function secProduct(s: Section): string {
   const feats = (s.features || [{ icon: "chart-line-up", text: "Which channel, campaign, and creative produced pipeline" }, { icon: "magnifying-glass", text: "Why a metric moved — root cause, not just a dashboard" }, { icon: "trend-up", text: "Unit economics & pipeline forecasting, across channels" }]).map((f: any) => `<div class="frow">${icon(f.icon || "circle")}<span>${esc(f.text)}</span></div>`).join("");
-  const inner = `<div class="section-label center">${icon(s.icon || "chart-line-up")} ${esc(s.eyebrow || "The product")}</div><h2 class="section-heading center">${esc(s.heading || "See where your pipeline actually comes from")}</h2>${s.sub ? `<p class="section-sub center">${esc(s.sub)}</p>` : ""}
+  const inner = `<div class="section-label center">${icon(s.icon || "chart-line-up")} ${esc(s.eyebrow || "The product")}</div><h2 class="section-heading center">${escH(s.heading || "See where your pipeline actually comes from")}</h2>${s.sub ? `<p class="section-sub center">${esc(s.sub)}</p>` : ""}
     <div class="mock"><div class="tb"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="u">app.petavue.com</span></div>
       <div class="g"><div class="side"><div class="b">Petavue</div><a class="on">${icon("chart-line-up")} Attribution</a><a>${icon("magnifying-glass")} Diagnostics</a><a>${icon("trend-up")} Pipeline forecast</a><a>${icon("coins")} Unit economics</a><a>${icon("crosshair")} Account scoring</a></div>
       <div class="main"><div class="mh">${esc(s.panelTitle || "Cross-channel attribution")}</div><p class="mdesc">${esc(s.panelDesc || "Every channel's spend connected to closed revenue — LinkedIn, Google, Meta, events, organic — in one model.")}</p><div class="frows">${feats}</div></div></div></div>`;
   return wrap(s.bg ?? "tint", "prod", inner, "product");
 }
 function secCta(s: Section): string {
-  return wrap(s.bg, "cta", `<div class="ctablock"><h2>${esc(s.heading)}</h2><p>${esc(s.body)}</p><a class="btn-primary" href="#">${esc(s.ctaLabel || "Book a teardown")} ${icon("arrow-right")}</a></div>`, "cta");
+  return wrap(s.bg, "cta", `<div class="ctablock"><h2>${escH(s.heading)}</h2><p>${esc(s.body)}</p><a class="btn-primary" href="#">${esc(s.ctaLabel || "Book a teardown")} ${icon("arrow-right")}</a></div>`, "cta");
 }
 // ---------- refined-template sections (agent-led) ----------
 // A reusable Slack/inbox-style agent recommendation card — used in the hero and the recommendations section.
@@ -236,23 +244,23 @@ function agentCard(c: any): string {
 // "We did our homework" — per-channel ad-intelligence recap (the subtle personalization proof).
 function secHomework(s: Section): string {
   const cards = (s.channels || []).map((ch: any) => `<div class="hw-card"><div class="hw-plat">${esc(ch.platform)}</div><div class="hw-stat">${esc(ch.stat)}</div><div class="hw-label">${esc(ch.label)}</div><p>${esc(ch.body)}</p></div>`).join("");
-  return wrap(s.bg ?? "white", "hw", `<div class="section-label">${icon(s.icon || "binoculars")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="hw-grid">${cards}</div>${s.footer ? `<p class="hw-footer">${esc(s.footer)}</p>` : ""}`);
+  return wrap(s.bg ?? "white", "hw", `<div class="section-label">${icon(s.icon || "binoculars")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="hw-grid">${cards}</div>${s.footer ? `<p class="hw-footer">${esc(s.footer)}</p>` : ""}`);
 }
 // "Point the agents at a goal" — example goals + the monitor→act loop.
 function secAgentLoop(s: Section): string {
   const goals = (s.goals || []).map((g: any) => `<div class="al-goal"><div class="al-goal-tag">Example goal</div><div class="al-goal-t">${esc(g.text)}</div><p>${esc(g.result)}</p></div>`).join("");
   const steps = (s.steps || []).map((st: any, i: number) => `<div class="al-step"><div class="al-n">${String(i + 1).padStart(2, "0")}</div><h3>${esc(st.title)}</h3><p>${esc(st.body)}</p></div>`).join("");
-  return wrap(s.bg ?? "tint", "al", `<div class="section-label">${icon(s.icon || "target")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}${goals ? `<div class="al-goals">${goals}</div>` : ""}<div class="al-steps">${steps}</div>`);
+  return wrap(s.bg ?? "tint", "al", `<div class="section-label">${icon(s.icon || "target")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}${goals ? `<div class="al-goals">${goals}</div>` : ""}<div class="al-steps">${steps}</div>`);
 }
 // "Two engines, running daily" — live agent recommendation mocks.
 function secRecommendations(s: Section): string {
   const cards = (s.cards || []).map((c: any) => agentCard(c)).join("");
-  return wrap(s.bg ?? "plain", "recs", `<div class="section-label">${icon(s.icon || "lightning")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="recs-grid">${cards}</div>${s.note ? `<p class="recs-note">${esc(s.note)}</p>` : ""}`);
+  return wrap(s.bg ?? "plain", "recs", `<div class="section-label">${icon(s.icon || "lightning")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="recs-grid">${cards}</div>${s.note ? `<p class="recs-note">${esc(s.note)}</p>` : ""}`);
 }
 // Interactive missed-pipeline calculator.
 function secCalculator(s: Section): string {
   const icp0 = s.icp ?? 50, fit0 = s.fit ?? 60, conv0 = s.conv ?? 3, acv0 = s.acv ?? 50000;
-  const inner = `<div class="section-label center">${icon(s.icon || "calculator")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}
+  const inner = `<div class="section-label center">${icon(s.icon || "calculator")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}
    <div class="calc">
      <div class="calc-inputs">
        <label>ICP accounts engaging ads / month <b><span id="calc-icp-v">${icp0}</span></b><input id="calc-icp" type="range" min="10" max="300" step="5" value="${icp0}"></label>
@@ -277,18 +285,36 @@ function secCalculator(s: Section): string {
 // "Recommendations you can defend" — trust/defensibility cards (reuses .cap styling).
 function secDefensibility(s: Section): string {
   const cards = (s.points || []).map((p: any) => `<div class="cap"><div class="cap-ic">${icon(p.icon || "shield-check")}</div><h3>${esc(p.title)}</h3><p>${esc(p.body)}</p></div>`).join("");
-  return wrap(s.bg ?? "plain", "caps", `<div class="section-label center">${icon(s.icon || "shield-check")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}<div class="cap-grid cols-3">${cards}</div>`);
+  return wrap(s.bg ?? "plain", "caps", `<div class="section-label center">${icon(s.icon || "shield-check")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}<div class="cap-grid cols-3">${cards}</div>`);
 }
 // "Connects to your stack" — integration chips with LIVE/READY badges.
 function secIntegrations(s: Section): string {
   const badge = (status: string) => status === "live" ? `<span class="intg-status">Live for you</span>` : status === "ready" ? `<span class="intg-status">Ready if you add it</span>` : "";
   const groups = (s.groups || []).map((gr: any) => `<div class="intg-group"><div class="intg-glabel">${esc(gr.label)}</div><div class="intg-pills">${(gr.items || []).map((it: any) => `<div class="intg-pill${it.status === "live" ? " live" : it.status === "ready" ? " ready" : ""}"><span class="intg-name">${esc(it.name)}</span>${badge(it.status)}</div>`).join("")}</div></div>`).join("");
-  return wrap(s.bg ?? "white", "intg", `<div class="section-label">${icon(s.icon || "plugs-connected")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="intg-groups">${groups}</div>`);
+  return wrap(s.bg ?? "white", "intg", `<div class="section-label">${icon(s.icon || "plugs-connected")} ${esc(s.eyebrow)}</div><h2 class="section-heading">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub big">${esc(s.body)}</p>` : ""}<div class="intg-groups">${groups}</div>`);
 }
 // The pilot — week-by-week timeline.
 function secPilot(s: Section): string {
   const steps = (s.steps || []).map((st: any) => `<div class="pilot-step"><div class="pilot-when">${esc(st.when)}</div><h3>${esc(st.title)}</h3><p>${esc(st.body)}</p></div>`).join("");
-  return wrap(s.bg ?? "tint", "pilot", `<div class="section-label center">${icon(s.icon || "rocket-launch")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${esc(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}<div class="pilot-grid">${steps}</div>`);
+  return wrap(s.bg ?? "tint", "pilot", `<div class="section-label center">${icon(s.icon || "rocket-launch")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}<div class="pilot-grid">${steps}</div>`);
+}
+// Booking — the closer: a LIVE cal.com calendar embedded in the page (no bounce to a new tab).
+// The embed is themed with the page's brand color (C.T.p500), so the prospect books inside
+// their own brand's page. `cal` = the cal.com link slug (default "prasanna"). Self-contained
+// like the calculator — its loader script lives inside the section. NOTE: the embed pulls JS
+// from app.cal.com at runtime, so it renders on the DEPLOYED page (and may be blank in a
+// local --shot screenshot, which has no network). Falls back to a plain link if JS is off.
+function secBooking(s: Section, C: Ctx): string {
+  const cal = String(s.cal || "prasanna").replace(/[^a-zA-Z0-9/_-]/g, "");
+  const brandHex = /^#[0-9a-fA-F]{6}$/.test(C.T.p500 || "") ? C.T.p500 : "#6F57FF";
+  const embed = `<div class="book-embed"><div id="cal-inline" style="width:100%;height:100%;min-height:640px;overflow:auto"><noscript><a class="btn-primary" href="https://cal.com/${cal}" target="_blank" rel="noopener">Pick a time on the calendar ${icon("arrow-up-right")}</a></noscript></div></div>
+<script>(function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if(typeof namespace === "string"){cal.ns[namespace] = cal.ns[namespace] || api;p(cal.ns[namespace], ar);p(cal, ["initNamespace", namespace]);} else p(cal, ar); return;} p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+Cal("init", {origin:"https://cal.com"});
+Cal("inline", { elementOrSelector:"#cal-inline", calLink: "${cal}", layout: "month_view" });
+Cal("ui", { styles:{ branding:{ brandColor:"${brandHex}" } }, hideEventTypeDetails:false, layout:"month_view" });</script>`;
+  // id="cta" so the hero's "Book a walkthrough" button (href="#cta") scrolls here — booking
+  // and cta are mutually-exclusive closers, so the anchor is unambiguous.
+  return wrap(s.bg ?? "white", "book", `<div class="section-label center">${icon(s.icon || "calendar-check")} ${esc(s.eyebrow)}</div><h2 class="section-heading center">${escH(s.heading)}</h2>${s.body ? `<p class="section-sub center">${esc(s.body)}</p>` : ""}${embed}`, "cta");
 }
 
 const RENDERERS: Record<string, (s: Section, C: Ctx) => string> = {
@@ -297,7 +323,7 @@ const RENDERERS: Record<string, (s: Section, C: Ctx) => string> = {
   capabilities: (s) => secCapabilities(s), productPreview: (s) => secProduct(s), cta: (s) => secCta(s),
   homework: (s) => secHomework(s), agentLoop: (s) => secAgentLoop(s), recommendations: (s) => secRecommendations(s),
   calculator: (s) => secCalculator(s), defensibility: (s) => secDefensibility(s), integrations: (s) => secIntegrations(s),
-  pilot: (s) => secPilot(s),
+  pilot: (s) => secPilot(s), booking: (s, C) => secBooking(s, C),
 };
 
 // ---------- page-spec validation (fail loud; never silently drop a section) ----------
@@ -308,6 +334,7 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   opportunity: ["heading"], splitFeature: ["heading"], statement: ["heading"], capabilities: ["items"],
   agentLoop: ["steps"], recommendations: ["cards"], calculator: ["heading"],
   defensibility: ["points"], integrations: ["groups"], productPreview: [], pilot: ["steps"], cta: ["heading"],
+  booking: ["heading"],
 };
 function validateSpec(spec: any): { errors: string[]; warnings: string[] } {
   const errors: string[] = [], warnings: string[] = [];
@@ -332,8 +359,9 @@ function validateSpec(spec: any): { errors: string[]; warnings: string[] } {
   const types = secs.map((s: any) => s?.type);
   if (!types.includes("hero")) errors.push('no "hero" section');
   else if (types[0] !== "hero") warnings.push('"hero" is not the first section');
-  if (!types.includes("cta")) warnings.push('no "cta" section');
-  else if (types[types.length - 1] !== "cta") warnings.push('"cta" is not the last section');
+  const closers = ["cta", "booking"];
+  if (!types.some((t) => closers.includes(t))) warnings.push('no "cta" or "booking" closing section');
+  else if (!closers.includes(types[types.length - 1])) warnings.push('the last section should be a "cta" or "booking" closer');
   if (!spec.brandColor) warnings.push('no verified brandColor — falling back to Brandfetch color ordering, which is unreliable');
   return { errors, warnings };
 }
@@ -356,7 +384,7 @@ ${F.head}
     --navy:#111726;--navy-mid:#1E2B45;--navy-soft:#2C3D5C;
     --teal:#0F9B6E;--teal-light:#D1F5E8;--teal-ink:#0B7A56;--coral:#E8452A;--coral-light:#FDECEA;--amber:#D97706;
     --n-50:#F0F1F5;--n-100:#E9EBF1;--n-200:#E1E4EC;--n-300:#CBD0DE;--n-400:#9BA3B8;--n-500:#757F99;--n-600:#5A6380;--n-700:#39415C;--n-800:#1E2B45;--n-900:#151C2E;
-    --text:#1E2B45;--text-muted:#5A6380;--heading:#151C2E;--f-heading:${F.headingStack};--f-body:${F.bodyStack};--f-mono:${F.monoStack};
+    --text:#1E2B45;--text-muted:#5A6380;--heading:#151C2E;--f-heading:${F.headingStack};--f-body:${F.bodyStack};--f-mono:${F.monoStack};--f-serif:${F.serifStack};
     /* on-dark palette */
     --d-heading:#FFFFFF;--d-text:#C5CBDE;--d-muted:#8B93AC;--d-line:rgba(255,255,255,.10);--d-card:#1A2236;
     --radius:12px;--radius-lg:20px;--radius-pill:999px;
@@ -374,15 +402,18 @@ ${F.head}
   .bg-dark .section-label{color:var(--p-300)}
   .bg-dark .section-sub,.bg-dark .body{color:var(--d-muted)}
   .bg-dark b,.bg-dark strong{color:var(--d-heading)}
-  h1,h2,h3{font-family:var(--f-heading);font-weight:400;color:var(--heading);margin:0}
+  h1,h2,h3{font-family:var(--f-heading);font-weight:800;color:var(--heading);margin:0}
+  /* Instrument Serif accent — italic emphasis words in headlines + the statement pull-quote */
+  .section-heading em,.hero h1 em,.cta h2 em{font-family:var(--f-serif);font-weight:400;font-style:italic;letter-spacing:-.5px;color:var(--heading)}
+  .bg-dark .section-heading em,.hero.bg-dark h1 em,.cta.bg-dark h2 em{color:inherit}
   em{font-style:italic}
   .ph{vertical-align:middle;line-height:1}
   b,strong{font-weight:700;color:var(--heading)}
-  /* eyebrow / section label — IBM Plex Mono, wide-tracked uppercase, brand accent */
-  .section-label{font-family:var(--f-mono);font-size:11.5px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--p-text);display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
+  /* eyebrow / section label — Manrope 700, wide-tracked uppercase, brand accent */
+  .section-label{font-family:var(--f-body);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--p-text);display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
   .section-label.center{justify-content:center}.section-label .ph{font-size:15px}
   /* display heading — Instrument Serif, editorial, tight tracking */
-  .section-heading{font-family:var(--f-heading);font-size:clamp(30px,4vw,46px);font-weight:400;line-height:1.08;letter-spacing:-.8px;color:var(--heading);max-width:20ch;margin:0}
+  .section-heading{font-family:var(--f-heading);font-size:clamp(30px,4vw,46px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;color:var(--heading);max-width:20ch;margin:0}
   .section-heading.center{text-align:center;margin:0 auto}
   .section-sub{font-family:var(--f-body);font-size:16px;color:var(--text-muted);line-height:1.75;max-width:600px;margin-top:16px}
   .section-sub.big{font-size:17px;max-width:640px}.section-sub.center{text-align:center;margin-left:auto;margin-right:auto}
@@ -399,7 +430,7 @@ ${F.head}
   .hero{padding-top:80px;padding-bottom:72px;position:relative;overflow:hidden}
   .hero .hero-split{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;position:relative;z-index:1}
   .hero .hero-solo{max-width:820px;position:relative;z-index:1}
-  .hero h1{font-size:clamp(42px,6vw,68px);line-height:1.05;letter-spacing:-1.6px;margin:0 0 24px;font-weight:400}
+  .hero h1{font-size:clamp(44px,6.4vw,72px);line-height:1.02;letter-spacing:-2.4px;margin:0 0 24px;font-weight:800}
   .hero .subtitle{font-size:17px;color:var(--text-muted);max-width:52ch;margin:0 0 28px;line-height:1.75}
   .hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
   /* dark hero — navy with a subtle purple radial glow top-right (Fixify signature) */
@@ -432,7 +463,7 @@ ${F.head}
   /* statement — big editorial serif quote */
   .state{padding:104px 0}
   .state .statement{text-align:center;max-width:860px;margin:0 auto}
-  .state h2{font-size:clamp(30px,4.4vw,50px);font-style:italic;line-height:1.14;letter-spacing:-1px;margin:0 auto;max-width:22ch;color:var(--navy)}
+  .state h2{font-family:var(--f-serif);font-weight:400;font-size:clamp(32px,4.6vw,54px);font-style:italic;line-height:1.14;letter-spacing:-1px;margin:0 auto;max-width:22ch;color:var(--navy)}
   .state .body{margin:24px auto 0;color:var(--text-muted);font-size:18px;max-width:56ch}
   .bg-dark.state h2{color:#fff}.bg-dark.state .body{color:var(--d-text)}
   .bg-dark.state .section-label{justify-content:center}
@@ -596,6 +627,14 @@ ${F.head}
   .pilot-step:not(:first-child){padding-left:24px}
   .pilot-when{font-family:var(--f-body);font-size:20px;font-weight:800;letter-spacing:-.5px;color:#6E9BF0;text-transform:none;margin-bottom:10px}
   .pilot-step h3{font-family:var(--f-body);font-size:16px;font-weight:800;letter-spacing:-.2px;margin:0 0 10px;color:#fff}.pilot-step p{margin:0;font-size:13px;color:#8892AB;line-height:1.7}
+
+  /* booking — live cal.com embed, brand-themed, in a framed card (the closer) */
+  .sec.book .section-label,.sec.book .section-heading,.sec.book .section-sub{text-align:center;margin-left:auto;margin-right:auto}
+  .sec.book .section-heading{max-width:none}
+  .book-embed{max-width:960px;margin:44px auto 0;background:var(--bg-card);border:1px solid var(--n-200);border-radius:var(--radius-lg);box-shadow:0 24px 60px rgba(21,28,46,.10);padding:10px;overflow:hidden}
+  .book-embed #cal-inline{border-radius:calc(var(--radius-lg) - 8px)}
+  .bg-dark.book .book-embed{box-shadow:0 24px 70px rgba(0,0,0,.4)}
+  @media (max-width:860px){.book-embed{margin-top:28px;padding:6px}.book-embed #cal-inline{min-height:560px}}
 
   /* scroll reveal */
   @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}

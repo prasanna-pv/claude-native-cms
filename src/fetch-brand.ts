@@ -11,6 +11,7 @@
 
 import { writeFile, mkdir } from "node:fs/promises";
 import type { BrandColor, BrandProfile } from "./types.ts";
+import { loadEnv } from "./searchapi.ts";
 
 interface Args {
   company: string;
@@ -56,6 +57,7 @@ async function downloadAsset(url: string, path: string): Promise<boolean> {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  await loadEnv(); // Node 18 has no --env-file; load .env manually (same as the SearchApi fetchers)
   const key = process.env.BRANDFETCH_API_KEY;
   if (!key) {
     console.error("[error] BRANDFETCH_API_KEY env var is required.");

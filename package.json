@@ -7,7 +7,7 @@
   "scripts": {
     "scrape:linkedin": "tsx src/scrape-linkedin.ts",
     "score": "tsx src/score.ts",
-    "fetch:brand": "node --env-file-if-exists=.env --import tsx src/fetch-brand.ts",
+    "fetch:brand": "tsx src/fetch-brand.ts",
     "render": "tsx src/render.ts",
     "scrape:meta": "tsx src/scrape-meta.ts",
     "probe:searchapi": "tsx src/searchapi-probe.ts",
